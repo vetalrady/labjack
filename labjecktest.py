@@ -99,6 +99,8 @@ class MainWindow(QtWidgets.QMainWindow):
         self.setWindowTitle("LabJack U3 – Live AIN0 Plot (25 kS/s)")
         self.resize(900, 500)
         pg.setConfigOptions(antialias=True)
+        # Dark gray background outside of the plot area
+        self.setStyleSheet("background-color: #333333;")
 
         # ----------------------------  UI  ----------------------------
         self._plot_widget = pg.PlotWidget()
@@ -108,7 +110,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._plot_widget.setYRange(0, 6, padding=0)
         self._plot_widget.setLimits(xMin=0, xMax=2, yMin=0, yMax=5)
         self._curve = self._plot_widget.plot(
-            pen=pg.mkPen(color="#B44C34", width=1)
+            pen=pg.mkPen(color="#B44C34", width=2)
         )
 
         self.statusBar().showMessage("Streaming…  0.00 s / 2.00 s")
