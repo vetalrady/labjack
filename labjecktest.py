@@ -16,6 +16,7 @@ from typing import List
 import numpy as np
 from PyQt5 import QtCore, QtWidgets, QtGui
 import pyqtgraph as pg
+from scipy.interpolate import CubicSpline
 
 # Enable OpenGL acceleration so thick lines render efficiently
 pg.setConfigOptions(useOpenGL=True)
@@ -125,9 +126,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # --------------------------  Data  ---------------------------
         self._samples = np.empty(0, dtype=np.float32)
-        # Smoothing kernel for a simple moving average
-        self._avg_window = 50  # number of samples in moving average
-        self._avg_kernel = np.ones(self._avg_window, dtype=np.float32) / self._avg_window
+        # Use cubic spline interpolation for smoothing
 
         # ------------------------  Worker  ---------------------------
         self._worker = StreamWorker()
@@ -182,11 +181,14 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(object)
     def _on_new_data(self, chunk: np.ndarray) -> None:
         self._samples = np.concatenate((self._samples, chunk))
-        smoothed = np.convolve(
-            self._samples, self._avg_kernel, mode="same"
-        )
-        x = np.arange(smoothed.size, dtype=np.float32) / self._worker.scan_rate
-        self._curve.setData(x, smoothed)
+        x_idx = np.arange(self._samples.size, dtype=np.float32)
+        if self._samples.size >= 4:
+            spline = CubicSpline(x_idx, self._samples)
+            smoothed = spline(x_idx).astype(np.float32)
+        else:
+            smoothed = self._samples
+        x_time = x_idx / self._worker.scan_rate
+        self._curve.setData(x_time, smoothed)
 
     @QtCore.pyqtSlot(str)
     def _on_error(self, msg: str) -> None:
