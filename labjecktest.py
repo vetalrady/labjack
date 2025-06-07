@@ -102,9 +102,14 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # ----------------------------  UI  ----------------------------
         self._plot_widget = pg.PlotWidget()
-        self._plot_widget.setLabel("bottom", "Sample #")
+        self._plot_widget.setLabel("bottom", "Time", units="s")
         self._plot_widget.setLabel("left", "Voltage", units="V")
-        self._curve = self._plot_widget.plot(pen=pg.mkPen(width=1))
+        self._plot_widget.setXRange(0, 2, padding=0)
+        self._plot_widget.setYRange(0, 5, padding=0)
+        self._plot_widget.setLimits(xMin=0, xMax=2, yMin=0, yMax=5)
+        self._curve = self._plot_widget.plot(
+            pen=pg.mkPen(color="#B44C34", width=1)
+        )
 
         self.statusBar().showMessage("Streaming…  0.00 s / 2.00 s")
 
@@ -136,7 +141,8 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(object)
     def _on_new_data(self, chunk: np.ndarray) -> None:
         self._samples = np.concatenate((self._samples, chunk))
-        self._curve.setData(self._samples)
+        x = np.arange(self._samples.size, dtype=np.float32) / self._worker.scan_rate
+        self._curve.setData(x, self._samples)
 
     @QtCore.pyqtSlot(str)
     def _on_error(self, msg: str) -> None:
