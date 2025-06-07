@@ -125,6 +125,9 @@ class MainWindow(QtWidgets.QMainWindow):
 
         # --------------------------  Data  ---------------------------
         self._samples = np.empty(0, dtype=np.float32)
+        # Smoothing kernel for a simple moving average
+        self._avg_window = 50  # number of samples in moving average
+        self._avg_kernel = np.ones(self._avg_window, dtype=np.float32) / self._avg_window
 
         # ------------------------  Worker  ---------------------------
         self._worker = StreamWorker()
@@ -179,8 +182,11 @@ class MainWindow(QtWidgets.QMainWindow):
     @QtCore.pyqtSlot(object)
     def _on_new_data(self, chunk: np.ndarray) -> None:
         self._samples = np.concatenate((self._samples, chunk))
-        x = np.arange(self._samples.size, dtype=np.float32) / self._worker.scan_rate
-        self._curve.setData(x, self._samples)
+        smoothed = np.convolve(
+            self._samples, self._avg_kernel, mode="same"
+        )
+        x = np.arange(smoothed.size, dtype=np.float32) / self._worker.scan_rate
+        self._curve.setData(x, smoothed)
 
     @QtCore.pyqtSlot(str)
     def _on_error(self, msg: str) -> None:
