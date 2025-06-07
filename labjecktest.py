@@ -135,6 +135,12 @@ class MainWindow(QtWidgets.QMainWindow):
         self._ui_timer.timeout.connect(self._update_status)
         self._ui_timer.start(200)  # ms
 
+        # Animation state for zooming
+        self._zoom_timer: QtCore.QTimer | None = None
+        self._zoom_initial: tuple[float, float] | None = None
+        self._zoom_target: tuple[float, float] | None = None
+        self._zoom_step: int = 0
+
     # ------------------------------------------------------------------
     # Qt slots
     # ------------------------------------------------------------------
@@ -154,10 +160,44 @@ class MainWindow(QtWidgets.QMainWindow):
             f"Acquisition complete – {self._samples.size:.0f} samples"
         )
         self._ui_timer.stop()
+        self._zoom_to_trigger()
 
     def _update_status(self) -> None:
         elapsed = min(self._elapsed_timer.elapsed() / 1000.0, 2.0)
         self.statusBar().showMessage(f"Streaming…  {elapsed:.2f} s / 2.00 s")
+
+    # ------------------------------------------------------------------
+    # Zoom helpers
+    # ------------------------------------------------------------------
+    def _zoom_to_trigger(self) -> None:
+        """Find first sample >4 V and animate zoom to it."""
+        if not np.any(self._samples > 4.0):
+            return
+        idx = int(np.argmax(self._samples > 4.0))
+        event_time = idx / self._worker.scan_rate
+        half_width = 0.05  # 50 ms window on each side
+        start = max(0.0, event_time - half_width)
+        end = min(self._samples.size / self._worker.scan_rate, event_time + half_width)
+
+        vb = self._plot_widget.getViewBox()
+        self._zoom_initial = tuple(vb.viewRange()[0])
+        self._zoom_target = (start, end)
+        self._zoom_step = 0
+        if self._zoom_timer is None:
+            self._zoom_timer = QtCore.QTimer(self)
+            self._zoom_timer.timeout.connect(self._animate_zoom_step)
+        self._zoom_timer.start(20)  # ~20ms per frame
+
+    def _animate_zoom_step(self) -> None:
+        assert self._zoom_initial is not None and self._zoom_target is not None
+        self._zoom_step += 1
+        steps = 25
+        frac = min(self._zoom_step / steps, 1.0)
+        start = (1 - frac) * self._zoom_initial[0] + frac * self._zoom_target[0]
+        end = (1 - frac) * self._zoom_initial[1] + frac * self._zoom_target[1]
+        self._plot_widget.setXRange(start, end, padding=0, update=True)
+        if frac >= 1.0:
+            self._zoom_timer.stop()
 
     # ------------------------------------------------------------------
     # Qt overrides
