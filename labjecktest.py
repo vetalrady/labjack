@@ -105,7 +105,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self._plot_widget.setLabel("bottom", "Time", units="s")
         self._plot_widget.setLabel("left", "Voltage", units="V")
         self._plot_widget.setXRange(0, 2, padding=0)
-        self._plot_widget.setYRange(0, 5, padding=0)
+        self._plot_widget.setYRange(0, 6, padding=0)
         self._plot_widget.setLimits(xMin=0, xMax=2, yMin=0, yMax=5)
         self._curve = self._plot_widget.plot(
             pen=pg.mkPen(color="#B44C34", width=1)
@@ -175,7 +175,7 @@ class MainWindow(QtWidgets.QMainWindow):
             return
         idx = int(np.argmax(self._samples > 4.0))
         event_time = idx / self._worker.scan_rate
-        half_width = 0.05  # 50 ms window on each side
+        half_width = 0.02  # 50 ms window on each side
         start = max(0.0, event_time - half_width)
         end = min(self._samples.size / self._worker.scan_rate, event_time + half_width)
 
