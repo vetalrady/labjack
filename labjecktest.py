@@ -17,6 +17,9 @@ import numpy as np
 from PyQt5 import QtCore, QtWidgets, QtGui
 import pyqtgraph as pg
 
+# Enable OpenGL acceleration so thick lines render efficiently
+pg.setConfigOptions(useOpenGL=True)
+
 try:
     import u3  # LabJack U3 driver (LabJackPython package)
 except ImportError as e:
@@ -98,12 +101,12 @@ class MainWindow(QtWidgets.QMainWindow):
         super().__init__()
         self.setWindowTitle("LabJack U3 – Live AIN0 Plot (25 kS/s)")
         self.resize(900, 500)
-        pg.setConfigOptions(antialias=True)
+        pg.setConfigOptions(antialias=True, useOpenGL=True)
         # Dark gray background outside of the plot area
         self.setStyleSheet("background-color: #333333;")
 
         # ----------------------------  UI  ----------------------------
-        self._plot_widget = pg.PlotWidget()
+        self._plot_widget = pg.PlotWidget(useOpenGL=True)
         self._plot_widget.setLabel("bottom", "Time", units="s")
         self._plot_widget.setLabel("left", "Voltage", units="V")
         self._plot_widget.setXRange(0, 2, padding=0)
