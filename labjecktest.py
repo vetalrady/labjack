@@ -14,7 +14,7 @@ import time
 from typing import List
 
 import numpy as np
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtWidgets, QtGui
 import pyqtgraph as pg
 
 try:
@@ -141,6 +141,33 @@ class MainWindow(QtWidgets.QMainWindow):
         self._zoom_target: tuple[float, float] | None = None
         self._zoom_step: int = 0
 
+    def _reset_acquisition(self) -> None:
+        """Stop current acquisition and start a fresh one."""
+        if self._worker.isRunning():
+            self._worker.stop()
+            self._worker.wait()
+        if self._zoom_timer is not None:
+            self._zoom_timer.stop()
+            self._zoom_timer = None
+        self._zoom_initial = None
+        self._zoom_target = None
+        self._zoom_step = 0
+
+        self._samples = np.empty(0, dtype=np.float32)
+        self._curve.setData([], [])
+        self._plot_widget.setXRange(0, 2, padding=0)
+
+        self._elapsed_timer.restart()
+        self.statusBar().showMessage("Streaming…  0.00 s / 2.00 s")
+
+        self._worker = StreamWorker()
+        self._worker.new_data.connect(self._on_new_data)
+        self._worker.error.connect(self._on_error)
+        self._worker.finished.connect(self._on_finished)
+        self._worker.start()
+        if not self._ui_timer.isActive():
+            self._ui_timer.start(200)
+
     # ------------------------------------------------------------------
     # Qt slots
     # ------------------------------------------------------------------
@@ -208,10 +235,16 @@ class MainWindow(QtWidgets.QMainWindow):
             self._worker.wait()
         event.accept()
 
+    def keyPressEvent(self, event):  # noqa: N802
+        if event.key() == QtCore.Qt.Key_Space:
+            self._reset_acquisition()
+        else:
+            super().keyPressEvent(event)
+
 
 if __name__ == "__main__":
     QtWidgets.QApplication.setAttribute(QtCore.Qt.AA_EnableHighDpiScaling)
     app = QtWidgets.QApplication(sys.argv)
     win = MainWindow()
-    win.show()
+    win.showFullScreen()
     sys.exit(app.exec_())
